@@ -5,13 +5,12 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <windows.h>
-
+#include <string>
 using namespace std;
 
 #include "Method/Method.h"
 #include "Cache/Cache.h"
 #include "Whitelist/Whitelist.h"
-
 
 void runProxy (){
     WSAData wsaData;
@@ -49,22 +48,41 @@ void runProxy (){
 	}
 
 	//TEST
-	SOCKADDR_IN clientAddr;
-    int clientAddrLen = sizeof(clientAddr);
-    SOCKET ProxyClient;
-    ProxyClient = accept(ProxyServer, (SOCKADDR*)&clientAddr, &clientAddrLen);
-    if (ProxyClient == INVALID_SOCKET) {
-        cout << "Failed to accept client connection.\n";
-        return;
 
-    cout << "Accepted connection from " << inet_ntoa(clientAddr.sin_addr) << ":" << ntohs(clientAddr.sin_port) << "\n";
+	while (true) {
+        SOCKADDR_IN clientAddr;
+        int clientAddrLen = sizeof(clientAddr);
+        SOCKET clientSocket = accept(ProxyServer, (SOCKADDR*)&clientAddr, &clientAddrLen);
+        if (clientSocket == INVALID_SOCKET) {
+            cout << "Failed to accept client connection.\n";
+            continue;
+        }
+        //cout << "Accepted connection from " << inet_ntoa(clientAddr.sin_addr) << ":" << ntohs(clientAddr.sin_port) << "\n";
 
+        int BuffSize = 4096;
+        char buf[BuffSize + 1];
+        memset(buf, 0, sizeof(buf));
+
+        string data = "";
+
+        int recvLen = recv(clientSocket, buf, BuffSize, 0);
+        if (recvLen <= 0)
+        {
+            return;
+        }
+        data += buf;
+
+        while (recvLen >= BuffSize)
+        {
+            memset(buf, 0, sizeof(buf));
+            recvLen = recv(clientSocket, buf, BuffSize, 0);
+            data += buf;
+        }
+        if (data.find("GET") != string::npos)
+            cout << data << "\n";
     }
 
-    closesocket(ProxyClient);
     closesocket(ProxyServer);
-
     WSACleanup();
 }
-
 #endif // PROXYSERVER_H_INCLUDED
