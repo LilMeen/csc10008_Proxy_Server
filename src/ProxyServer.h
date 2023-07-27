@@ -6,6 +6,9 @@
 #include <ws2tcpip.h>
 #include <windows.h>
 #include <string>
+#include <vector>
+#include <fstream>
+
 using namespace std;
 
 #include "Method/Method.h"
@@ -59,29 +62,9 @@ void runProxy (){
         }
         //cout << "Accepted connection from " << inet_ntoa(clientAddr.sin_addr) << ":" << ntohs(clientAddr.sin_port) << "\n";
 
-        int BuffSize = 4096;
-        char buf[BuffSize + 1];
-        memset(buf, 0, sizeof(buf));
-
         string data = "";
-
-        int recvLen = recv(clientSocket, buf, BuffSize, 0);
-        if (recvLen <= 0)
-        {
-            return;
-        }
-        data += buf;
-
-        while (recvLen >= BuffSize)
-        {
-            memset(buf, 0, sizeof(buf));
-            recvLen = recv(clientSocket, buf, BuffSize, 0);
-            data += buf;
-        }
-        if (data.find("GET") != string::npos)
-            cout << data << "\n";
-    }
-
+        getData(data, clientSocket);
+	}
     closesocket(ProxyServer);
     WSACleanup();
 }
