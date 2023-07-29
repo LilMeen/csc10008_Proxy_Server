@@ -2,24 +2,24 @@
 #define WHITELIST_H_INCLUDED
 
 #include "../ProxyServer.h"
-
-#endif // WHITELIST_H_INCLUDED
-
 vector <string> loadWhiteList(){
     ifstream ifs;
     ifs.open("whilelist.conf");
     if (!ifs.is_open()){
         cout << "Cannot load file!";
+        vector <string> v;
+        return v;
     }
-    else{
-    vector <string> webName;
-    string s;
-    while(getline(ifs, s)){
-        webName.push_back(s);
-        s = "";
-        }
-    ifs.close();
-    return webName;
+    else
+    {
+        vector <string> webName;
+        string s;
+        while(getline(ifs, s)){
+            webName.push_back(s);
+            s = "";
+            }
+        ifs.close();
+        return webName;
     }
 }
 
@@ -32,3 +32,5 @@ bool isAllowed(vector <string> webName, string host){
 }
 
 
+
+#endif // WHITELIST_H_INCLUDED

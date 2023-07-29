@@ -6,14 +6,68 @@
 #include <ws2tcpip.h>
 #include <windows.h>
 #include <string>
+#include <string.h>
 #include <vector>
 #include <fstream>
-
+#include <thread>
 using namespace std;
 
 #include "Method/Method.h"
 #include "Cache/Cache.h"
 #include "Whitelist/Whitelist.h"
+
+void handleClient(SOCKET clientSocket) {
+	string data = "";
+	string webName = getWebName(getClientRequest(data, clientSocket));
+	if (webName != "" && webName.find("detectportal") == string::npos)
+	{
+		cout << webName << "\n";
+		data += "Connection: close\r\n";
+		cout << data << endl;
+
+		SOCKET serverSocket = socket(AF_INET, SOCK_STREAM, 0);
+		if (serverSocket == INVALID_SOCKET) {
+			cout << "Error creating server socket." << endl;
+			return;
+		}
+
+		struct hostent* hostentData;
+		hostentData = gethostbyname(webName.c_str());
+		if (hostentData == NULL) {
+			cout << "Error resolving hostname." << endl;
+			closesocket(serverSocket);
+			return;
+		}
+
+		SOCKADDR_IN serverAddr;
+		serverAddr.sin_family = AF_INET;
+		serverAddr.sin_port = htons(80);
+		serverAddr.sin_addr.s_addr = *((unsigned long*)hostentData->h_addr);
+
+		if (connect(serverSocket, (SOCKADDR*)&serverAddr, sizeof(serverAddr)) != SOCKET_ERROR)
+		{
+			cout << "Connected to " << webName << "\nHost IP address: " << inet_ntoa(serverAddr.sin_addr) << "\n";
+
+			//string httpRequest = data + "\r\n\r\n"; 
+			string httpRequest = data;
+			int sendResult = send(serverSocket, httpRequest.c_str(), httpRequest.size(), 0);
+			if (sendResult == SOCKET_ERROR)
+			{
+				cout << "Error sending request to server." << endl;
+				closesocket(serverSocket);
+				return;
+			}
+			
+			cout << "Request is sent to server! \n\n";
+
+			string s = receiveDataFromWebServerByContentLength(serverSocket);
+			cout << s << endl;
+			cout << "===========================================" << endl;
+
+			sendResponseToClient(clientSocket, s);
+		}	
+	}
+}
 
 void runProxy (){
     WSAData wsaData;
@@ -49,7 +103,7 @@ void runProxy (){
 		cout << "Listen failed!\n";
 		return;
 	}
-
+	
 	//TEST
 
 	while (true) {
@@ -60,11 +114,10 @@ void runProxy (){
             cout << "Failed to accept client connection.\n";
             continue;
         }
-        //cout << "Accepted connection from " << inet_ntoa(clientAddr.sin_addr) << ":" << ntohs(clientAddr.sin_port) << "\n";
 
-        string data = "";
-        getData(data, clientSocket);
+		handleClient(clientSocket);
 	}
+
     closesocket(ProxyServer);
     WSACleanup();
 }
